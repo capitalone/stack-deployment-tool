@@ -1,0 +1,124 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Green/Blue experiment
+Mappings: {}
+Parameters:
+  AMI:
+    Description: AMI id
+    Type: String
+  ASV:
+    Default: ""
+    Description: ASV for project
+    Type: String
+  AppSubnets:
+    Description: The subnets that the auto scale group will exist
+    Type: List<AWS::EC2::Subnet::Id>
+  Environment:
+    AllowedValues:
+    - build
+    - dev
+    - qa
+    - prod
+    Default: dev
+    Description: Environment
+    Type: String
+  InstanceProfileARN:
+    Description: Instance Profile ARN
+    Type: String
+  InstanceSecurityGroups:
+    Description: Instance Security group id for drone
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  InstanceType:
+    Default: t2.large
+    Description: Instance Type
+    Type: String
+  KeyName:
+    Description: Instance Key
+    Type: String
+  LBSecurityGroups:
+    Description: LB Security group id for drone
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  LBSubnets:
+    Description: The subnets that the load balancer will cover
+    Type: List<AWS::EC2::Subnet::Id>
+  OwnerContact:
+    Default: opensourceoffice@capitalone.com
+    Description: Email of owner
+    Type: String
+  VPCId:
+    Description: The VPC for app to run in.
+    Type: AWS::EC2::VPC::Id
+Resources:
+  AsgBlue:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: 1
+      LaunchConfigurationName: !Ref LcBlue
+      LoadBalancerNames: 
+      - !Ref LoadBalancer
+      MaxSize: 13
+      MinSize: 1
+      Tags:
+      - Key: Name
+        PropagateAtLaunch: true
+        Value: Blue
+      VPCZoneIdentifier: !Ref AppSubnets
+  LcBlue:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref InstanceProfileARN
+      ImageId: !Ref AMI
+      InstanceMonitoring: true
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups: !Ref InstanceSecurityGroups
+      UserData:
+        "Fn::Base64": !Sub |
+            #!/usr/bin/env bash
+            apt-get update -y
+            apt-get install -y nginx
+            echo 'Blue' > /usr/share/nginx/html/index.html
+            apt-get install -y python python-setuptools
+            cd /opt
+            if [ -a /opt/aws/aws-cfn-bootstrap ]; then
+              ln -sf /opt/aws/aws-cfn-bootstrap/bin /opt/aws/bin
+            else
+              curl https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz -O
+              mkdir -p /opt/aws
+              tar -zxvf aws-cfn-bootstrap-latest.tar.gz --strip-components=1 -C /opt/aws
+              easy_install -s /opt/aws/bin aws-cfn-bootstrap-latest.tar.gz
+              ln -fs /opt/aws/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
+            fi
+            /opt/aws/bin/cfn-signal --exit-code $? --region ${AWS::Region} '${WaitHandleBlue}'
+  LoadBalancer:
+    Properties:
+      CrossZone: true
+      HealthCheck:
+        HealthyThreshold: "2"
+        Interval: "6"
+        Target: TCP:80
+        Timeout: "5"
+        UnhealthyThreshold: "10"
+      Listeners:
+      - InstancePort: 80
+        InstanceProtocol: HTTP
+        LoadBalancerPort: 80
+        Protocol: HTTP
+      LoadBalancerName: test-elb
+      Scheme: internal
+      SecurityGroups: !Ref LBSecurityGroups
+      Subnets: !Ref LBSubnets
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+  WaitConditionBlue:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: "AsgBlue"
+    Properties:
+      Count: 1
+      Handle: !Ref WaitHandleBlue
+      Timeout: "600"
+  WaitHandleBlue:
+    Type: AWS::CloudFormation::WaitConditionHandle
+Outputs:
+  LoadbalancerDNSName:
+    Value: !GetAtt LoadBalancer.DNSName

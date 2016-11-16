@@ -1,0 +1,15 @@
+UserData: 
+    "Fn::Base64": !Sub |
+        #!/bin/bash
+        yum install -y aws-cfn-bootstrap
+        ${Local::IncludeFile file_content.txt}
+        /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+        /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
+UserData2: 
+    "Fn::Base64": !Local::IncludeFileLines file_content.txt
+
+UserData3: # unsupported
+    !Base64 "Fn::Local::IncludeFileLines": "file_content.txt"
+UserData4: { # unsupported
+    "Fn::Base64": {"Fn::Local::IncludeFileLines" : "file_content.txt" }
+}

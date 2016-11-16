@@ -1,0 +1,10 @@
+version.properties
+build.properties
+build
+recorder.sh
+demo*.sh
+*.out
+f
+cmd/ver.go
+resources/test.rb
+fixtures

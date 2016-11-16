@@ -1,0 +1,4 @@
+asdfoasdf
+oqoruiqweour
+echo 'Blue' > /usr/share/nginx/html/index.html
+echo "Green" > /usr/share/nginx/html/index.html

@@ -1,0 +1,207 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Green/Blue experiment",
+  "Parameters": {
+    "ASV" : {
+      "Description" : "ASV for project",
+      "Type" : "String"
+    },
+    "CMDBEnvironment" : {
+      "Description" : "CMDB Enviornment for project",
+      "Type" : "String"
+    },
+    "LBSecurityGroups" : {
+      "Type": "List<AWS::EC2::SecurityGroup::Id>",
+      "Description": "LB Security group id for drone"
+    },
+    "LBSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "The subnets that the load balancer will cover"
+    },
+    "MaxInstances": {
+      "Type":"String",
+      "Default":"2"
+    },
+    "MinInstances": {
+      "Type":"String",
+      "Default":"1"
+    },
+    "Proxy" : {
+      "Type":"String"
+    },
+    ### Blue/Green
+    "AppSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "The subnets that the auto scale group will exist",
+    },
+    "VPCId" : {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description" : "The VPC for drone to run in."
+    },
+    "InstanceProfileARN" : {
+      "Type" : "String",
+      "Description" : "Instance Profile ARN"
+    },
+    "KeyName": {
+      "Type": "String",
+      "Description": "Name of an AWS keypair to use on instances"
+    },
+    "Environment": {
+      "Type": "String",
+      "Description": "Environment",
+      "Default": "dev",
+      "AllowedValues": ["build", "dev", "qa", "prod"]
+    },
+    "OwnerContact": {
+      "Description": "Email of owner",
+      "Type": "String"
+    },
+    "InstanceSecurityGroups" : {
+      "Type": "List<AWS::EC2::SecurityGroup::Id>",
+      "Description": "Instance Security group id for drone"
+    },
+    "AMI" : {
+      "Type": "String",
+      "Description" : "AMI id"
+    },
+    "InstanceType" : {
+      "Type": "String",
+      "Description" : "Instance Type",
+      "Default": "t2.large"
+    },
+    ## for demo purposes
+    "ActiveMessage" : {
+      "Type":"String",
+      "Default": "Blue"
+    }
+  },
+
+  "Mappings": {
+  },
+
+  "Conditions" : {
+  },
+
+  "Resources": {
+
+    "LoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Listeners": [{"LoadBalancerPort": 80, "Protocol": "HTTP", "InstancePort": 80, "InstanceProtocol": "HTTP"}],
+        "CrossZone": true,
+        "Scheme" : "internal",
+        "HealthCheck": {
+          "Target": "TCP:80",
+          "HealthyThreshold": "2",
+          "UnhealthyThreshold": "10",
+          "Interval": "20",
+          "Timeout": "15"
+        },
+        "Subnets": {"Ref": "LBSubnets"},
+        "SecurityGroups": {"Ref": "LBSecurityGroups"},
+        "LoadBalancerName": "bluegreen-elb"
+      }
+    },
+
+    ################## Blue / Green #####################
+    "BlueGreenAsg": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "LaunchConfigurationName": {"Ref": "LaunchConfig"},
+        
+        "MinSize": {"Ref":"MinInstances"},
+        "DesiredCapacity": {"Ref":"MinInstances"},
+        "MaxSize": {"Ref":"MaxInstances"},
+        "HealthCheckGracePeriod" : 300,
+        "HealthCheckType": "ELB",
+        "Cooldown" : "60",
+
+        "VPCZoneIdentifier": {"Ref": "AppSubnets"},
+        "LoadBalancerNames": [{"Ref": "LoadBalancer"}],
+        "Tags": [{"Key": "Name", "PropagateAtLaunch": true, "Value": "Blue"}],
+
+        "MetricsCollection": [{
+          "Granularity": "1Minute",
+          "Metrics": [ "GroupMinSize", "GroupMaxSize" ]
+        }],
+      },
+      "UpdatePolicy" : {
+        "AutoScalingScheduledAction" : {
+          "IgnoreUnmodifiedGroupSizeProperties" : "true"
+        },
+        "AutoScalingRollingUpdate" : {
+          "MinInstancesInService" : "1",
+          "MaxBatchSize" : "2",
+          "MinSuccessfulInstancesPercent": "100", # 100% needs to work
+          "WaitOnResourceSignals" : "true",
+          "PauseTime" : "PT7M" # if it takes longer than 7 minutes.. whoa..
+        }
+      }
+    },
+
+    # We assume aws-cli & cfn are installed
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "configSets" : { "full_install": [ "verify_instance_health" ] },
+          "verify_instance_health" : {
+            "commands" : {
+              "ELBHealthCheck" : {
+                "command" : { "Fn::Join" : ["", [ 
+                  "until [ \"$state\" == \"\\\"InService\\\"\" ]; do ",
+                  "  state=$(aws --region ", { "Ref" : "AWS::Region" }, " elb describe-instance-health ",
+                  "              --load-balancer-name ", { "Ref" : "LoadBalancer" }, 
+                  "              --instances $(curl -s http://169.254.169.254/latest/meta-data/instance-id) ",
+                  "              --query InstanceStates[0].State); ",
+                  "  sleep 10; ",
+                  "done"
+                ]]}
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "AssociatePublicIpAddress": false,
+        "IamInstanceProfile": {"Ref": "InstanceProfileARN"},
+        "ImageId": {"Ref" : "AMI"},
+        "InstanceType": {"Ref": "InstanceType"},
+        "KeyName": {"Ref": "KeyName"},
+        "SecurityGroups": {"Ref": "InstanceSecurityGroups"},
+        "InstanceMonitoring": true,
+        "UserData": { "Fn::Base64": { "Fn::Join": [ "", [
+          "#!/usr/bin/env bash\n",
+          "apt-get update -y\n",
+
+          {"Fn::Local::IncludeFileLines" : "userdata.sh" },
+          
+          "sleep 10\n",
+
+          # todo, remove the aws-cfn-bootstrap subdir
+          {"Fn::Sub" : "/opt/aws/aws-cfn-bootstrap/bin/cfn-signal --exit-code $? '${DeployWaitHandle}'\n" },
+          {"Fn::Sub" : "/opt/aws/aws-cfn-bootstrap/bin/cfn-signal -e $? --https-proxy=${Proxy} --stack ${AWS::StackName} --resource BlueGreenAsg --region ${AWS::Region} \n" }
+        ]]}}
+      }
+    },
+
+    "DeployWaitHandle" : { "Type" : "AWS::CloudFormation::WaitConditionHandle" },
+    "DeployWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "Properties" : {
+        "Handle": { "Ref" : "DeployWaitHandle" },
+        "Timeout": "500",
+        "Count" : 1
+      }
+    }
+  },
+
+  "Outputs": {
+    "LoadbalancerDNSName": {
+      "Value": {"Fn::GetAtt": ["LoadBalancer", "DNSName"]}
+    },
+    "LoadbalancerURL": {
+      "Value": { "Fn::Join" : ["", [ "http://", {"Fn::GetAtt": ["LoadBalancer", "DNSName"]} ]]}
+    }
+  }
+}

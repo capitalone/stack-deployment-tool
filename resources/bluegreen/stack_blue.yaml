@@ -1,0 +1,102 @@
+---
+# For supported Template params, see: lib/c1/deliver/stacks_config.rb
+common_parameters: &common_parameters
+  ASV: '{{env key="ASV" default="NO_ASV"}}'
+  CMDBEnvironment: '{{env key="CMDBEnvironment" default="NO_ENV"}}'
+
+common_tags: &common_tags
+  OwnerContact: You@github.com
+  CreatedByURL: '{{env key="BUILD_URL" default="NA"}}'
+  CreatedBy: '{{env.USER}}'
+
+stacks:
+  dev-techops:
+    blue: # this is the stack name
+      vars:
+        us-west-2: 
+          VPCId: asdf
+      on_failure: DELETE
+      template: '{{env key="TEMPLATE" default="blue.yaml"}}' # or blue.hjson
+      parameters:
+        VPCId: '{{env.VPCId}}'
+        AppSubnets: '{{env.AppSubnets}}'
+        LBSubnets: '{{env.LBSubnets}}'
+        KeyName: '{{env.KeyName}}'
+        InstanceProfileARN: '{{env.InstanceProfileARN}}'
+        InstanceSecurityGroups: '{{env.InstanceSecurityGroups}}'
+        LBSecurityGroups: '{{env.LBSecurityGroups}}'
+        Environment: dev
+        AMI: '{{env.AMI}}'
+      tags:
+        <<: *common_tags
+        Environment: dev
+    bluegreen: # bluegreen example using the same stack as above
+      vars:
+        us-west-2: 
+          VPCId: asdf
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        LBSecurityGroups: '{{env.LBSecurityGroups}}'
+        LBSubnets: '{{env.LBSubnets}}'
+        VPCId: '{{env.VPCId}}'
+        AppSubnets: '{{env.AppSubnets}}'
+        KeyName: '{{env.KeyName}}'
+        InstanceProfileARN: '{{env.InstanceProfileARN}}'
+        InstanceSecurityGroups: '{{env.InstanceSecurityGroups}}'
+        Environment: dev
+        AMI: '{{env.AMI}}'
+        OwnerContact: '{{env.OwnerContact}}'
+        Proxy: '{{env.PROXY}}'
+      tags:
+        <<: *common_tags
+        Environment: dev
+    bluegreen-2: # bluegreen example using the same stack as above
+      stack_name: bluegreen
+      vars:
+        us-west-2: 
+          VPCId: asdf
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        LBSecurityGroups: '{{env.LBSecurityGroups}}'
+        LBSubnets: '{{env.LBSubnets}}'
+        # Blue/Green
+        ActiveMessage: 'Green'
+        MinInstances: "2"
+        VPCId: '{{env.VPCId}}'
+        AppSubnets: '{{env.AppSubnets}}'
+        KeyName: '{{env.KeyName}}'
+        InstanceProfileARN: '{{env.InstanceProfileARN}}'
+        InstanceSecurityGroups: '{{env.InstanceSecurityGroups}}'
+        Environment: dev
+        AMI: '{{env.AMI_OLD}}'  # -1 of the current ami
+        OwnerContact: '{{env.OwnerContact}}'
+        Proxy: '{{env.PROXY}}'
+      tags:
+        <<: *common_tags
+        Environment: dev
+    bluegreen-3: # bluegreen example using the same stack as above
+      stack_name: bluegreen
+      vars:
+        us-west-2: 
+          VPCId: asdf
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        LBSecurityGroups: '{{env.LBSecurityGroups}}'
+        LBSubnets: '{{env.LBSubnets}}'
+        # Blue/Green
+        ActiveMessage: 'Blue'
+        VPCId: '{{env.VPCId}}'
+        AppSubnets: '{{env.AppSubnets}}'
+        KeyName: '{{env.KeyName}}'
+        InstanceProfileARN: '{{env.InstanceProfileARN}}'
+        InstanceSecurityGroups: '{{env.InstanceSecurityGroups}}'
+        Environment: build # changed env
+        AMI: '{{env.AMI}}'
+        OwnerContact: '{{env.OwnerContact}}'
+        Proxy: '{{env.PROXY}}'
+      tags:
+        <<: *common_tags
+        Environment: build # changed env

@@ -1,0 +1,208 @@
+---
+# For supported Template params, see: lib/c1/deliver/stacks_config.rb
+common_parameters: &common_parameters
+  OwnerContact: You@github.com
+
+common_inf_parameters: &common_inf_parameters
+  InfVersion: '{{env.INF_VERSION}}'
+  SharedInfVersion: v0.0.7
+
+common_tags: &common_tags
+  OwnerContact: You@github.com
+  CreatedByURL: '{{env.BUILD_URL default="NA"}}'
+  CreatedBy: '{{env.USER}}'
+
+common_inf_tags: &common_inf_tags
+  InfVersion: '{{env.INF_VERSION}}'
+
+artifacts:
+  s3:
+    bucket: cap1-build-tools-test
+    group: com.capitalone.stack-depoyment-tool
+    name: nagios
+    version: '{{env.APP_VERSION}}'
+
+
+stacks:
+  build:
+    LogGroupName: 'SC-00000000-0000000000000000'
+    Endpoint: 'https://nagios-elb-build-{{env.STACK_VERSION}}'
+    nagios-elb:
+      stack_name: nagios-elb-build-{{#escstackname}}{{ pipeline_version }}{{/escstackname}}
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        Environment: dev
+        sslCertId: arn:aws:iam::00000000:server-certificate/MyCert
+        Artifact: '{{s3artifact repo="sandbox"}}'
+      tags:
+        <<: *common_tags
+        Environment: build
+    nagios-server:
+      depends_on: nagios-elb
+      stack_name: nagios-server-build-{{pipeline_version}}-v{{env.INF_VERSION}}
+      stack_name_prefix: nagios-server-build-{{pipeline_version}}-v
+      on_failure: DELETE
+      depends_on: nagios-elb
+      parameters:
+        <<: *common_parameters
+        <<: *common_inf_parameters
+        Environment: dev
+        InstanceType: t2.micro
+        ArtifactRepo: '{{env.ARTIFACT_REPO default="snapshot"}}'
+      tags:
+        <<: *common_tags
+        <<: *common_inf_tags
+        Environment: build
+
+  dev:
+    Endpoint: 'https://{{output stack="nagios-elb-dev-testor" key="ELBDNS"}}'
+    nagios-elb:
+      stack_name: nagios-elb-dev-{{env.USER}}
+      on_failure: DELETE
+      depends_on: nagios-server # circular
+      parameters:
+        <<: *common_parameters
+        Environment: dev
+        sslCertId: arn:aws:iam::00000000:server-certificate/MyCert
+      tags:
+        <<: *common_tags
+        Environment: dev
+    nagios-server:
+      stack_name: nagios-server-dev-{{env.USER}}-v{{env.INF_VERSION}}
+      stack_name_prefix: nagios-server-dev-{{env.USER}}-v
+      on_failure: DELETE
+      depends_on: nagios-elb
+      parameters:
+        <<: *common_parameters
+        <<: *common_inf_parameters
+        Environment: dev
+        InstanceType: t2.micro
+        ChefSoloTarballRepo: WildWildWest
+        notificationSNSARN: arn:aws:sns:us-east-1:00000000:SC-00000000-0000000000000000-AlertSNS-00000000
+        instanceProfileARN: SC-00000000-0000000000000000-NagiosServerInstanceProfile-00000000
+        LogGroupName: '{{output stack="SC-00000000-0000000000000000" key="NagiosLogGroupName"}}'
+        NagiosELB: '{{output stack="nagios-elb-dev-{{env.USER}}" key="ELBNAME"}}'
+        NagiosSNS: '{{output stack="nagios-elb-dev-{{env.USER}}" key="STACKSNS"}}'
+      tags:
+        <<: *common_tags
+        <<: *common_inf_tags
+        Environment: dev
+
+  qa:
+    nagios-elb:
+      stack_name: nagios-elb-qa
+      on_failure: ROLLBACK
+      depends_on: nagios-elb # depends on self..
+      parameters:
+        <<: *common_parameters
+        Environment: qa
+        sslCertId: arn:aws:iam::00000000:server-certificate/MyCert
+      tags:
+        <<: *common_tags
+        Environment: qa
+    nagios-server:
+      stack_name: nagios-server-qa-v{{env.INF_VERSION}}
+      stack_name_prefix: nagios-server-qa-v
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        <<: *common_inf_parameters
+        Environment: qa
+        InstanceType: t2.micro
+        ChefSoloTarballRepo: WildWildWest
+        notificationSNSARN: arn:aws:sns:us-east-1:00000000:SC-00000000-0000000000000000-AlertSNS-00000000
+        instanceProfileARN: SC-00000000-0000000000000000-NagiosServerInstanceProfile-00000000
+        LogGroupName: '{{output stack="SC-00000000-0000000000000000" key="NagiosLogGroupName"}}'
+        NagiosELB: '{{output stack="nagios-elb-qa" key="ELBNAME"}}'
+        NagiosSNS: '{{output stack="nagios-elb-qa" key="STACKSNS"}}'
+      tags:
+        <<: *common_tags
+        <<: *common_inf_tags
+        Environment: qa
+
+  qa2:
+    nagios-internal-dns:
+      stack_name: nagios-dns-qa2
+    nagios-r53:
+      stack_name: nagios-r53-qa2
+      depends_on: nagios-internal-dns
+    nagios-elb:
+      stack_name: nagios-elb-qa
+      on_failure: ROLLBACK
+      parameters:
+        <<: *common_parameters
+        Environment: qa
+        sslCertId: arn:aws:iam::00000000:server-certificate/MyCert
+      tags:
+        <<: *common_tags
+        Environment: qa
+    nagios-server:
+      stack_name: nagios-server-qa-v{{env.INF_VERSION}}
+      stack_name_prefix: nagios-server-qa-v
+      depends_on: nagios-elb
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        <<: *common_inf_parameters
+        Environment: qa
+        InstanceType: t2.micro
+        ChefSoloTarballRepo: WildWildWest
+        notificationSNSARN: arn:aws:sns:us-east-1:00000000:SC-00000000-0000000000000000-AlertSNS-00000000
+        instanceProfileARN: SC-00000000-0000000000000000-NagiosServerInstanceProfile-00000000
+        LogGroupName: '{{output stack="SC-00000000-0000000000000000" key="NagiosLogGroupName"}}'
+        NagiosELB: '{{output stack="nagios-elb-qa" key="ELBNAME"}}'
+        NagiosSNS: '{{output stack="nagios-elb-qa" key="STACKSNS"}}'
+      tags:
+        <<: *common_tags
+        <<: *common_inf_tags
+        Environment: qa
+
+  prod:
+    nagios-elb:
+      stack_name: nagios-elb-prod
+      on_failure: ROLLBACK
+      parameters:
+        <<: *common_parameters
+        Environment: prod
+        sslCertId: arn:aws:iam::00000000:server-certificate/MyCert
+      tags:
+        <<: *common_tags
+        Environment: prod
+    nagios-server:
+      stack_name: nagios-server-prod-v{{env.INF_VERSION}}
+      stack_name_prefix: nagios-server-prod-v
+      on_failure: DELETE
+      parameters:
+        <<: *common_parameters
+        <<: *common_inf_parameters
+        Environment: prod
+        InstanceType: m3.medium
+        ChefSoloTarballRepo: WildWildWest
+        notificationSNSARN: TBD
+        instanceProfileARN: TBD
+        LogGroupName: TBD
+        NagiosELB: '{{output stack="nagios-elb-prod" key="ELBNAME"}}'
+        NagiosSNS: '{{output stack="nagios-elb-prod" key="STACKSNS"}}'
+      tags:
+        <<: *common_tags
+        <<: *common_inf_tags
+        Environment: prod
+
+  issue63:
+    nagios-server:
+      template: issue_63_cft
+      stack_name: c1d-test-issue-63
+      stack_name_prefix: c1d-test-issue-63
+      on_failure: DELETE
+      parameters:
+        #<<: *common_parameters
+        #<<: *common_inf_parameters
+        AMI: "ami-12345678"
+        Environment: prod
+        InstanceType: '{{env.INSTANCE_TYPE}}'
+        #InstanceType: t2.medium
+      tags:
+        #<<: *common_tags
+        #<<: *common_inf_tags
+        Environment: prod

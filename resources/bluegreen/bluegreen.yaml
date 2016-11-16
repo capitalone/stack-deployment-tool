@@ -1,0 +1,161 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+Conditions: {}
+Description: Green/Blue experiment
+Mappings: {}
+Parameters:
+  AMI:
+    Description: AMI id
+    Type: String
+  ASV:
+    Description: ASV for project
+    Type: String
+  ActiveMessage:
+    Default: Blue
+    Type: String
+  AppSubnets:
+    Description: The subnets that the auto scale group will exist
+    Type: List<AWS::EC2::Subnet::Id>
+  CMDBEnvironment:
+    Description: CMDB Enviornment for project
+    Type: String
+  Environment:
+    AllowedValues:
+    - build
+    - dev
+    - qa
+    - prod
+    Default: dev
+    Description: Environment
+    Type: String
+  InstanceProfileARN:
+    Description: Instance Profile ARN
+    Type: String
+  InstanceSecurityGroups:
+    Description: Instance Security group id for drone
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  InstanceType:
+    Default: t2.large
+    Description: Instance Type
+    Type: String
+  KeyName:
+    Description: Name of an AWS keypair to use on instances
+    Type: String
+  LBSecurityGroups:
+    Description: LB Security group id for drone
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  LBSubnets:
+    Description: The subnets that the load balancer will cover
+    Type: List<AWS::EC2::Subnet::Id>
+  MaxInstances:
+    Default: "2"
+    Type: String
+  MinInstances:
+    Default: "1"
+    Type: String
+  OwnerContact:
+    Description: Email of owner
+    Type: String
+  Proxy:
+    Type: String
+  VPCId:
+    Description: The VPC for drone to run in.
+    Type: AWS::EC2::VPC::Id
+Resources:
+  BlueGreenAsg:
+    Properties:
+      Cooldown: "60"
+      DesiredCapacity: !Ref MinInstances
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB
+      LaunchConfigurationName: !Ref LaunchConfig
+      LoadBalancerNames:
+      - !Ref LoadBalancer
+      MaxSize: !Ref MaxInstances
+      MetricsCollection:
+      - Granularity: 1Minute
+        Metrics:
+        - GroupMinSize
+        - GroupMaxSize
+      MinSize: !Ref MinInstances
+      Tags:
+      - Key: Name
+        PropagateAtLaunch: true
+        Value: Blue
+      VPCZoneIdentifier: !Ref AppSubnets
+    Type: AWS::AutoScaling::AutoScalingGroup
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: "2"
+        MinInstancesInService: "1"
+        MinSuccessfulInstancesPercent: "100"
+        PauseTime: PT7M
+        WaitOnResourceSignals: "true"
+      AutoScalingScheduledAction:
+        IgnoreUnmodifiedGroupSizeProperties: "true"
+  DeployWaitCondition:
+    Properties:
+      Count: 1
+      Handle: !Ref DeployWaitHandle
+      Timeout: "500"
+    Type: AWS::CloudFormation::WaitCondition
+  DeployWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  LaunchConfig:
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          full_install:
+          - verify_instance_health
+        verify_instance_health:
+          commands:
+            ELBHealthCheck:
+              command: !Sub |
+                  until [ "$state" == "\"InService\"" ]; do
+                    state=$(aws --region ${AWS::Region} elb describe-instance-health 
+                                --load-balancer-name ${LoadBalancer}
+                                --instances $(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+                                --query InstanceStates[0].State); 
+                    sleep 10;
+                  done
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref InstanceProfileARN
+      ImageId: !Ref AMI
+      InstanceMonitoring: true
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups: !Ref InstanceSecurityGroups
+      UserData:
+        "Fn::Base64": !Sub |
+            #!/usr/bin/env bash
+            apt-get update -y
+            ${Local::IncludeFile userdata.sh}
+            sleep 10
+            /opt/aws/aws-cfn-bootstrap/bin/cfn-signal -e $? '${DeployWaitHandle}'
+            /opt/aws/aws-cfn-bootstrap/bin/cfn-signal -e $? --https-proxy=${Proxy} --stack ${AWS::StackName} --resource BlueGreenAsg --region ${AWS::Region}
+    Type: AWS::AutoScaling::LaunchConfiguration
+  LoadBalancer:
+    Properties:
+      CrossZone: true
+      HealthCheck:
+        HealthyThreshold: "2"
+        Interval: "20"
+        Target: TCP:80
+        Timeout: "15"
+        UnhealthyThreshold: "10"
+      Listeners:
+      - InstancePort: 80
+        InstanceProtocol: HTTP
+        LoadBalancerPort: 80
+        Protocol: HTTP
+      LoadBalancerName: bluegreen-elb
+      Scheme: internal
+      SecurityGroups: !Ref LBSecurityGroups
+      Subnets: !Ref LBSubnets
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+Outputs:
+  LoadbalancerDNSName:
+    Value: !GetAtt LoadBalancer.DNSName
+  LoadbalancerURL:
+    Value: !Join [ "", ["http://", !GetAtt LoadBalancer.DNSName ]]

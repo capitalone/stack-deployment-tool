@@ -1,0 +1,9 @@
+{ 
+  "UserData": { "Fn::Base64": { "Fn::Join": [ "", [
+                "#!/usr/bin/env bash\n",
+                {"Fn::Local::IncludeFileLines" : "file_content.txt" },
+                "apt-get update -y\n",
+              ]]}},
+              
+  "File" : {"Fn::Local::IncludeFileLines" : "file_content.txt" } # path is relative to this file
+}

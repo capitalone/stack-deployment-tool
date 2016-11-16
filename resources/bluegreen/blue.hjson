@@ -1,0 +1,154 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Green/Blue experiment",
+  "Parameters": {
+    "AppSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "The subnets that the auto scale group will exist",
+    },
+
+    "VPCId" : {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description" : "The VPC for app to run in."
+    },
+
+    "InstanceProfileARN" : {
+        "Type" : "String",
+        # ecsInstanceRole
+        "Description" : "Instance Profile ARN"
+    },
+
+    "LBSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "The subnets that the load balancer will cover"
+    },
+
+    "KeyName": {
+      "Type": "String",
+      "Description": "Name of an AWS keypair to use on instances"
+    },
+    "Environment": {
+      "Type": "String",
+      "Description": "Environment",
+      "Default": "dev",
+      "AllowedValues": ["build", "dev", "qa", "prod"]
+    },
+    "OwnerContact": {
+      "Description": "Email of owner",
+      "Type": "String",
+      "Default": "opensourceoffice@capitalone.com"
+    },
+    "ASV" : {
+      "Description" : "ASV for project",
+      "Type" : "String",
+      "Default": ""
+    },
+    "KeyName" : {
+      "Type": "String",
+      "Description" : "Instance Key"
+    },
+    "AMI" : {
+      "Type": "String",
+      "Description" : "AMI id"
+    },
+    "InstanceType" : {
+      "Type": "String",
+      "Description" : "Instance Type",
+      "Default": "t2.large"
+    },
+    "InstanceSecurityGroups" : {
+      "Type": "List<AWS::EC2::SecurityGroup::Id>",
+      "Description": "Instance Security group id for drone"
+    },
+    "LBSecurityGroups" : {
+      "Type": "List<AWS::EC2::SecurityGroup::Id>",
+      "Description": "LB Security group id for drone"
+    }
+  },
+
+  "Mappings": {
+  },
+
+  "Resources": {
+
+    "LoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Listeners": [{"LoadBalancerPort": 80, "Protocol": "HTTP", "InstancePort": 80, "InstanceProtocol": "HTTP"}],
+        "CrossZone": true,
+        "Scheme" : "internal",
+        "HealthCheck": {
+          "Target": "TCP:80",
+          "HealthyThreshold": "2",
+          "UnhealthyThreshold": "10",
+          "Interval": "6",
+          "Timeout": "5"
+        },
+        "Subnets": {"Ref": "LBSubnets"},
+        "SecurityGroups": {"Ref": "LBSecurityGroups"},
+        "LoadBalancerName": "test-elb"
+      }
+    },
+
+    "AsgBlue": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "LaunchConfigurationName": {"Ref": "LcBlue"},
+        "MinSize": 1,
+        "DesiredCapacity": 1,
+        "MaxSize": 13,
+        "VPCZoneIdentifier": {"Ref": "AppSubnets"},
+        "LoadBalancerNames": [{"Ref": "LoadBalancer"}],
+        "Tags": [{"Key": "Name", "PropagateAtLaunch": true, "Value": "Blue"}]
+      }
+    },
+
+    "LcBlue": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "AssociatePublicIpAddress": false,
+        "IamInstanceProfile": {"Ref": "InstanceProfileARN"},
+        "ImageId": {"Ref" : "AMI"},
+        "InstanceType": {"Ref": "InstanceType"},
+        "KeyName": {"Ref": "KeyName"},
+        "SecurityGroups": {"Ref": "InstanceSecurityGroups"},
+        "InstanceMonitoring": true,
+        "UserData": { "Fn::Base64": { "Fn::Join": [ "", [
+          "#!/usr/bin/env bash\n",
+          "apt-get update -y\n",
+          "apt-get install -y nginx\n",
+          "echo 'Blue' > /usr/share/nginx/html/index.html\n",
+          "apt-get install -y python python-setuptools\n",
+          "cd /opt\n",
+          "if [ -a /opt/aws/aws-cfn-bootstrap ]; then\n",
+            "ln -sf /opt/aws/aws-cfn-bootstrap/bin /opt/aws/bin\n",
+          "else\n",
+            "curl https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz -O\n",
+            "mkdir -p /opt/aws\n",
+            "tar -zxvf aws-cfn-bootstrap-latest.tar.gz --strip-components=1 -C /opt/aws\n",
+            "easy_install -s /opt/aws/bin aws-cfn-bootstrap-latest.tar.gz\n",
+            "ln -fs /opt/aws/init/ubuntu/cfn-hup /etc/init.d/cfn-hup\n",
+          "fi\n",
+          "/opt/aws/bin/cfn-signal --exit-code $? --region ", {"Ref":"AWS::Region"}, " '", { "Ref": "WaitHandleBlue" }, "'\n"
+        ]]}}
+      }
+    },
+
+    "WaitHandleBlue" : { "Type" : "AWS::CloudFormation::WaitConditionHandle" },
+    "WaitConditionBlue" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "AsgBlue",
+      "Properties" : {
+        "Handle": { "Ref" : "WaitHandleBlue" },
+        "Timeout": "600",
+        "Count" : 1
+      }
+    },
+  },
+
+  "Outputs": {
+    "LoadbalancerDNSName": {
+      "Value": {"Fn::GetAtt": ["LoadBalancer", "DNSName"]}
+    }
+  }
+}
