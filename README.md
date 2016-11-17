@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/capitalone/stack-deployment-tool)](https://goreportcard.com/report/github.com/capitalone/stack-deployment-tool)
+
 # Stack Deployment Tool
 
 Tool that codeifies packaging & delivery best-practices. 
