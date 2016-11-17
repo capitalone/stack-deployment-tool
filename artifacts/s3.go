@@ -151,7 +151,7 @@ func (a *S3Artifact) artifactPath() string {
 	templ := a.Path
 	p, err := raymond.MustParse(templ).Exec(a)
 	if err != nil {
-		log.Errorf("Error procesing s3 path template: %s %v", templ, err)
+		log.Errorf("Error processing s3 path template: %s %v", templ, err)
 		return ""
 	}
 
@@ -163,7 +163,7 @@ func (a *S3Artifact) s3ArtifactPath() string {
 
 	p, err := raymond.MustParse(templ).Exec(a)
 	if err != nil {
-		log.Errorf("Error procesing s3 path template: %s %v", templ, err)
+		log.Errorf("Error processing s3 path template: %s %v", templ, err)
 		return ""
 	}
 	return cleanDoubleSlashes(p)
