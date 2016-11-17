@@ -17,7 +17,7 @@ Provides Enhanced Capabilities to CloudFormation Stacks:
 
 ## Features
 
-* Cloudformation
+* CloudFormation
  * Multiple Stack definitions in a single file (stacks.yml)
   * Holds parameters & tags for stacks for multiple stacks & multiple environments
   * Carry stack outputs as input parameters to new stack creations
