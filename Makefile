@@ -50,12 +50,12 @@ quick: build_darwin
 .PHONY: build_linux
 build_linux:
 	export GOOS=$(subst build_,,$@) && export GOARCH="amd64" && mkdir -p build/$${GOOS}_$${GOARCH} && cd build &&\
-		go build ${VER_FLAG} -o ${filename}_$${GOOS}_$${GOARCH} ${MAIN_PACKAGE} && cp ${filename}_$${GOOS}_$${GOARCH} $${GOOS}_$${GOARCH}/${bin_name}
+		go build ${VER_FLAG} -o ${bin_name}_$${GOOS}_$${GOARCH} ${MAIN_PACKAGE} && cp ${bin_name}_$${GOOS}_$${GOARCH} $${GOOS}_$${GOARCH}/${bin_name}
 
 .PHONY: build_darwin
 build_darwin:
 	export GOOS=$(subst build_,,$@) && export GOARCH="amd64" && mkdir -p build/$${GOOS}_$${GOARCH} && cd build &&\
-		go build ${VER_FLAG} -o ${filename}_$${GOOS}_$${GOARCH} ${MAIN_PACKAGE} && cp ${filename}_$${GOOS}_$${GOARCH} $${GOOS}_$${GOARCH}/${bin_name}
+		go build ${VER_FLAG} -o ${bin_name}_$${GOOS}_$${GOARCH} ${MAIN_PACKAGE} && cp ${bin_name}_$${GOOS}_$${GOARCH} $${GOOS}_$${GOARCH}/${bin_name}
 
 
 .PHONY: build
