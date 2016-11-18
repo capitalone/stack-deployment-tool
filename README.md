@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/capitalone/stack-deployment-tool.svg?branch=master)](https://travis-ci.org/capitalone/stack-deployment-tool)
 [![Go Report Card](https://goreportcard.com/badge/github.com/capitalone/stack-deployment-tool)](https://goreportcard.com/report/github.com/capitalone/stack-deployment-tool)
 
-# Stack Deployment Tool  <img src="docs/mascot1.png" width="50px" alt="Stack Deployment Tool">
+# Stack Deployment Tool  
 
 Tool that codeifies packaging & delivery best-practices. 
 It extends stack configuration with local templating and associating multiple [CloudFormation](https://aws.amazon.com/cloudformation/) stacks for lifecycle management: deployment, updating, and destroying. 
