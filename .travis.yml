@@ -1,0 +1,15 @@
+language: go
+go:
+- 1.7.3
+- master
+deploy:
+  provider: releases
+  api_key:
+    secure: w5BA2xzsQ7Q4pO+ixaUFzVl62UxfrZD/tP6dCSThLtQBis5jIQNz0xdHsRItzo8zEBaZSMpOoLbz66iwsnG7U2bCvkhh5k+qmkYwai1UEJnbpAeJIbQTilMVnCCnjuYvwuUyjNo7AHf1+l7LP/I1HcGuv6HMamDcNeKL29xM8oyjAewxB+7RgVoaXMKTBLqQMn4dDNeTBVUxv0F0TO1olK2a4D9Vh42E1qLUS0WlIEl/TzStDKphH8j1EL9hS8tx/g2MAhvPTYGsJ+SYpDGMX3G4wnk3rbILCZCT9N2WhJVjqmef6k2u0SE1+JpJnuBnW+NUKsxLQsCIKFe0wgq5mIPU0uYnaQsKLZzK8Efm8yRMIMOUKy18boKI2FeRwryN0wFR0mucFqPL8QZZelg82i34MGNyjBGxvSMmS5riJtJy5DKYtzZ06/tdAjbiejmGM2SChascJ5ha4VdnNzlTGVBGUPnWGqsMQkjoMAso+4dUdtqkUe5E+Iu/DvPDQZK/nsNayRH2/yo285EQ1xJfuMUOV8JS7BNfjZeHHrL5kitp+ffpLJQ18+txS2WvcdKcDPexJ0JLmikzRhSFz7WExwshYbx/ko/zc43gjKKkm3gbJETLQffMvTP7FYS73RsM6ft1SCDUBt5t4eNw3sJVD/HtsStLZmF+lKc/Fd4JJBA=
+  file: 
+    - build/sdt_linux_amd64
+    - build/sdt_darwin_amd64
+  skip_cleanup: true
+  on:
+    repo: capitalone/stack-deployment-tool
+    tags: true
