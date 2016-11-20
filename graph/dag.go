@@ -76,35 +76,14 @@ func (d *DAG) VertexList() []*Vertex {
 }
 
 func (d *DAG) vertexList(start *Vertex) []*Vertex {
-
 	result := []*Vertex{}
-	if true {
-
-		visited := map[*Vertex]bool{}
-		if start != nil {
-			downVerts := list.New()
-			downVerts.PushBack(start)
-			for el := downVerts.Front(); el != nil; el = el.Next() {
-				vert := castVertex(el)
-				if _, found := visited[vert]; !found {
-					result = append(result, vert)
-					visited[vert] = true
-					edges := d.Vertices[vert]
-					for _, edge := range edges {
-						downVerts.PushBack(edge.Child)
-					}
-				}
-			}
-		}
-
-	} else {
-		if start != nil {
-			d.VisitDepthFirst(start, func(vert *Vertex) bool {
-				result = append(result, vert)
-				return true
-			})
-		}
+	if start != nil {
+		d.VisitDepthFirst(start, func(vert *Vertex) bool {
+			result = append(result, vert)
+			return true
+		})
 	}
+
 	return result
 }
 
