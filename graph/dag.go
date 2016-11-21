@@ -59,9 +59,37 @@ func (d *DAG) AddEdge(e *Edge) {
 	if !d.VertexExists(e.Parent) {
 		d.AddVertex(e.Parent)
 	}
+	if !d.VertexExists(e.Child) {
+		d.AddVertex(e.Child)
+	}
 	if edges, ok := d.Vertices[e.Parent]; ok {
 		d.Vertices[e.Parent] = append(edges, e)
 	}
+}
+
+func (d *DAG) FindVertexByName(name string) *Vertex {
+	for k, _ := range d.Vertices {
+		if k.Name == name {
+			return k
+		}
+	}
+	return nil
+}
+
+func (d *DAG) AddEdgeBetweenVertices(parentName, childName string) *Edge {
+	p := d.FindVertexByName(parentName)
+	if p == nil {
+		p = &Vertex{Name: parentName}
+	}
+
+	c := d.FindVertexByName(childName)
+	if c == nil {
+		c = &Vertex{Name: childName}
+	}
+
+	e := &Edge{Parent: p, Child: c}
+	d.AddEdge(e)
+	return e
 }
 
 func (d *DAG) VertexExists(v *Vertex) bool {
@@ -71,11 +99,11 @@ func (d *DAG) VertexExists(v *Vertex) bool {
 	return false
 }
 
-func (d *DAG) VertexList() []*Vertex {
-	return d.vertexList(d.Root)
+func (d *DAG) VertexListFromRoot() []*Vertex {
+	return d.VertexList(d.Root)
 }
 
-func (d *DAG) vertexList(start *Vertex) []*Vertex {
+func (d *DAG) VertexList(start *Vertex) []*Vertex {
 	result := []*Vertex{}
 	if start != nil {
 		d.VisitDepthFirst(start, func(vert *Vertex) bool {
@@ -187,7 +215,7 @@ func (d *DAG) TransitiveReduction() {
 
 		// check if any of the other vertices in adjacenet edges exist below the vertex being examined
 		for _, lowerEdge := range lowerEdges {
-			verts := d.vertexList(lowerEdge.Child)
+			verts := d.VertexList(lowerEdge.Child)
 			for _, upperEdge := range edges {
 				if arrayContainsVertex(verts, upperEdge.Child) {
 					d.RemoveEdge(upperEdge)
@@ -246,4 +274,11 @@ func (d *DAG) VisitEdges(visitor EdgeVistorFunc) {
 		edge := castEdge(el)
 		visitor(edge)
 	}
+}
+
+func (e *Edge) String() string {
+	return fmt.Sprintf("%s -> %s", e.Parent.Name, e.Child.Name)
+}
+func (v *Vertex) String() string {
+	return fmt.Sprintf("%s", v.Name)
 }

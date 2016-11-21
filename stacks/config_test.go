@@ -139,6 +139,8 @@ func TestDependsOn(t *testing.T) {
 	// no order constraints
 	assert.Contains(t, qa.StackLabels, "nagios-elb")
 	assert.Contains(t, qa.StackLabels, "nagios-server")
+
+	// qa2
 	qa2 := c.FetchEnvStacks("qa2")
 
 	dns1 := indexInArray("nagios-internal-dns", qa2.StackLabels)

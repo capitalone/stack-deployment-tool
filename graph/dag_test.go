@@ -36,8 +36,8 @@ func TestDagCreation(t *testing.T) {
 	dag.AddEdge(&Edge{Parent: r, Child: c3})
 	dag.AddEdge(&Edge{Parent: c3, Child: c4})
 
-	//fmt.Printf("%#v\n", dag.VertexList())
-	for i, v := range dag.VertexList() {
+	//fmt.Printf("%#v\n", dag.VertexListFromRoot())
+	for i, v := range dag.VertexListFromRoot() {
 		//fmt.Printf("[%d] = %#v\n", i, v)
 		switch i {
 		case 0:
@@ -63,6 +63,8 @@ func TestDagCreation(t *testing.T) {
 	// fmt.Printf("%#v -> %#v\n", c3, c4)
 	// fmt.Printf("------------\n")
 	dag.Print(os.Stdout)
+
+	assert.Equal(t, dag.FindVertexByName("99999"), c3)
 }
 
 func TestDagTransitiveReduction(t *testing.T) {
@@ -87,8 +89,8 @@ func TestDagTransitiveReduction(t *testing.T) {
 	})
 	dag.Print(os.Stdout)
 
-	fmt.Printf("%#v\n", dag.VertexList())
-	for i, v := range dag.VertexList() {
+	fmt.Printf("%#v\n", dag.VertexListFromRoot())
+	for i, v := range dag.VertexListFromRoot() {
 		fmt.Printf("[%d] = %#v\n", i, v)
 	}
 
@@ -144,6 +146,60 @@ func TestDagCycleCheck2(t *testing.T) {
 	assert.True(t, dag.HasCycles())
 }
 
+func TestSimpleDag(t *testing.T) {
+	dag := NewDAG()
+	r := "ROOT"
+	s1 := "nagios-internal-dns"
+	s2 := "nagios-r53"
+	s3 := "nagios-elb"
+	s4 := "nagios-server"
+	/*
+		vr := &Vertex{Name: r}
+		v1 := &Vertex{Name: s1}
+		v2 := &Vertex{Name: s2}
+		v3 := &Vertex{Name: s3}
+		v4 := &Vertex{Name: s4}
+		dag.AddRoot(vr)
+		dag.AddEdge(&Edge{Parent: vr, Child: v1})
+		dag.AddEdge(&Edge{Parent: v1, Child: v2})
+		dag.AddEdge(&Edge{Parent: vr, Child: v3})
+
+		assert.Equal(t, dag.FindVertexByName(s3), v3)
+		dag.AddEdge(&Edge{Parent: v3, Child: v4})
+	*/
+	// r-> s1 -> s2  r->s3->s4
+	dag.AddRoot(&Vertex{Name: r})
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(r, s1))
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(s1, s2))
+
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(r, s3))
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(s3, s4))
+
+	for i, v := range dag.VertexListFromRoot() {
+		//fmt.Printf("[%d] = %#v\n", i, v)
+		switch i {
+		case 0:
+			assert.Equal(t, v.Name, "ROOT")
+		case 1:
+			assert.Equal(t, v.Name, "nagios-internal-dns")
+		case 2:
+			assert.Equal(t, v.Name, "nagios-elb")
+		case 3:
+			assert.Equal(t, v.Name, "nagios-r53")
+		case 4:
+			assert.Equal(t, v.Name, "nagios-server")
+		default:
+			assert.True(t, false)
+		}
+	}
+	// for k, v := range dag.Vertices {
+	// 	fmt.Printf("k[%s] = %#v\n", k, v)
+	// 	for _, e := range v {
+	// 		fmt.Printf(" k[%s] = %#v -> %#v\n", k, e.Parent.Name, e.Child.Name)
+	// 	}
+	// }
+}
+
 func TestDagExampleTransitiveReduction(t *testing.T) {
 	dag := NewDAG()
 	a := &Vertex{Name: "A"}
@@ -170,9 +226,9 @@ func TestDagExampleTransitiveReduction(t *testing.T) {
 	fmt.Printf("------------\n")
 	dag.Print(os.Stdout)
 	fmt.Printf("------------\n")
-	fmt.Printf("%#v\n", dag.VertexList())
+	fmt.Printf("%#v\n", dag.VertexListFromRoot())
 
-	for i, v := range dag.VertexList() {
+	for i, v := range dag.VertexListFromRoot() {
 		fmt.Printf("[%d] = %#v\n", i, v)
 		switch i {
 		case 0:
