@@ -43,13 +43,13 @@ func TestDagCreation(t *testing.T) {
 		case 0:
 			assert.Equal(t, v.Name, "blah")
 		case 1:
-			assert.Equal(t, v.Name, "alskdjf")
-		case 2:
 			assert.Equal(t, v.Name, "99999")
-		case 3:
-			assert.Equal(t, v.Name, "12341234")
-		case 4:
+		case 2:
 			assert.Equal(t, v.Name, "C4")
+		case 3:
+			assert.Equal(t, v.Name, "alskdjf")
+		case 4:
+			assert.Equal(t, v.Name, "12341234")
 		default:
 			assert.True(t, false)
 		}
@@ -146,6 +146,47 @@ func TestDagCycleCheck2(t *testing.T) {
 	assert.True(t, dag.HasCycles())
 }
 
+func TestDagDFS(t *testing.T) {
+	dag := NewDAG()
+
+	r := "ROOT"
+	s1 := "nagios-internal-dns"
+	s2 := "nagios-r53"
+	s3 := "nagios-elb"
+	s4 := "nagios-server"
+	s5 := "nagios-db"
+	// r-> s1 -> s2  r->s3->s4->s5
+	dag.AddRoot(&Vertex{Name: r})
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(r, s1))
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(s1, s2))
+
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(r, s3))
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(s3, s4))
+	assert.NotNil(t, dag.AddEdgeBetweenVertices(s4, s5))
+
+	index := 0
+	dag.VisitDepthFirst(dag.Root, func(vert *Vertex) bool {
+		switch index {
+		case 0:
+			assert.Equal(t, r, vert.Name)
+		case 1:
+			assert.Equal(t, s3, vert.Name)
+		case 2:
+			assert.Equal(t, s4, vert.Name)
+		case 3:
+			assert.Equal(t, s5, vert.Name)
+		case 4:
+			assert.Equal(t, s1, vert.Name)
+		case 5:
+			assert.Equal(t, s2, vert.Name)
+		default:
+			assert.True(t, false) // shouldnt get here
+		}
+		index++
+		return true
+	})
+}
+
 func TestSimpleDag(t *testing.T) {
 	dag := NewDAG()
 	r := "ROOT"
@@ -181,15 +222,15 @@ func TestSimpleDag(t *testing.T) {
 		case 0:
 			assert.Equal(t, v.Name, "ROOT")
 		case 1:
-			assert.Equal(t, v.Name, "nagios-internal-dns")
-		case 2:
 			assert.Equal(t, v.Name, "nagios-elb")
-		case 3:
-			assert.Equal(t, v.Name, "nagios-r53")
-		case 4:
+		case 2:
 			assert.Equal(t, v.Name, "nagios-server")
+		case 3:
+			assert.Equal(t, v.Name, "nagios-internal-dns")
+		case 4:
+			assert.Equal(t, v.Name, "nagios-r53")
 		default:
-			assert.True(t, false)
+			assert.True(t, false) // shouldnt get here
 		}
 	}
 	// for k, v := range dag.Vertices {
@@ -234,15 +275,15 @@ func TestDagExampleTransitiveReduction(t *testing.T) {
 		case 0:
 			assert.Equal(t, v.Name, "A")
 		case 1:
-			assert.Equal(t, v.Name, "B")
-		case 2:
 			assert.Equal(t, v.Name, "C")
-		case 3:
+		case 2:
 			assert.Equal(t, v.Name, "D")
-		case 4:
+		case 3:
 			assert.Equal(t, v.Name, "E")
+		case 4:
+			assert.Equal(t, v.Name, "B")
 		default:
-			assert.True(t, false)
+			assert.True(t, false) // shouldnt get here
 		}
 	}
 	/*
@@ -272,7 +313,7 @@ func TestDagExampleTransitiveReduction(t *testing.T) {
 			assert.Equal(t, edge.Parent.Name, "C")
 			assert.Equal(t, edge.Child.Name, "D")
 		default:
-			assert.True(t, false)
+			assert.True(t, false) // shouldnt get here
 		}
 		vertIdx++
 	})

@@ -131,8 +131,9 @@ func (d *DAG) VisitDepthFirst(startVertex *Vertex, visitor VertexVisitorFunc) {
 	if start != nil {
 		downVerts := list.New()
 		downVerts.PushBack(start)
-		for el := downVerts.Front(); el != nil; el = el.Next() {
+		for el := downVerts.Front(); el != nil; el = downVerts.Front() {
 			vert := castVertex(el)
+			downVerts.Remove(el)
 			if _, found := visited[vert]; !found {
 				result = append(result, vert)
 				visited[vert] = true
@@ -143,7 +144,7 @@ func (d *DAG) VisitDepthFirst(startVertex *Vertex, visitor VertexVisitorFunc) {
 				}
 				edges := d.Vertices[vert]
 				for _, edge := range edges {
-					downVerts.PushBack(edge.Child)
+					downVerts.PushFront(edge.Child)
 				}
 			}
 		}
