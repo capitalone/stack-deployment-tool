@@ -13,3 +13,4 @@ deploy:
   on:
     repo: capitalone/stack-deployment-tool
     tags: true
+    go: '1.7.3'
