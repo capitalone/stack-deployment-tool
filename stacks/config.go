@@ -20,11 +20,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/capitalone/stack-deployment-tool/graph"
 	"github.com/capitalone/stack-deployment-tool/utils"
 
 	log "github.com/Sirupsen/logrus"
 	jsonptr "github.com/dustin/go-jsonpointer"
-	dag "github.com/hashicorp/terraform/dag"
 )
 
 type Fetcher interface {
@@ -126,18 +126,8 @@ func (c *StacksConfig) FetchEnvStacks(stackRef string) *EnvStacksConfig {
 		Env:  env, StackLabels: stackLabels, Config: c, Stacks: stacks}
 }
 
-func orderedArray(stackLabels []string, deps *dag.AcyclicGraph) []string {
-	var result []string
-	root, err := deps.Root()
-	// stacks that need to be ordered, go first, then everything else.
-	if err == nil {
-		rootName := root.(dag.NamedVertex).Name()
-		log.Debugf("root: %+v\n", rootName)
-		// walk children
-		result = childrenNames(root, deps)
-	} else {
-		log.Errorf("Error walking DAG: %#v", err)
-	}
+func orderedArray(stackLabels []string, deps *graph.DAG) []string {
+	result := childrenNames(deps.Root, deps)
 	log.Debugf("orderedArray result: %#v\n", result)
 	return result
 }
@@ -146,65 +136,42 @@ type LabeledVertex interface {
 	Label() string
 }
 
-type RootNamedVertex struct {
-}
+var root = &graph.Vertex{Name: "ROOT"}
 
-func (r *RootNamedVertex) Name() string {
-	return "ROOT"
-}
-
-func depsGraph(stacks map[string]StackConfig) *dag.AcyclicGraph {
-	root := RootNamedVertex{}
+func depsGraph(stacks map[string]StackConfig) *graph.DAG {
 	// order stack names based on DAG
-	depsGraph := &dag.AcyclicGraph{}
-	depsGraph.Add(&root)
+	depsGraph := graph.NewDAG()
+
+	depsGraph.AddRoot(root)
 	for _, st := range stacks {
 		s := st
-		depsGraph.Add(&s)
 		// depends on maps to the stack label
 		for _, d := range s.dependsOn() {
 			src := stacks[d]
 			if s.Label() != d { // dont add a connection to myself.
-				e := dag.BasicEdge(&src, &s)
-				depsGraph.Add(&src)
-				depsGraph.Connect(e)
+				depsGraph.AddEdgeBetweenVertices(src.Label(), s.Label())
+			} else { // add it off the root
+				depsGraph.AddEdgeBetweenVertices(root.Name, s.Label())
 			}
 		}
 		if len(s.dependsOn()) == 0 {
 			// add to the root
-			depsGraph.Connect(dag.BasicEdge(&root, &s))
+			depsGraph.AddEdgeBetweenVertices(root.Name, s.Label())
 		}
-	}
-	// make sure there are not multiple roots..
-	for _, v := range depsGraph.Vertices() {
-		if v == &root {
-			continue
-		}
-		if depsGraph.UpEdges(v).Len() == 0 {
-			depsGraph.Connect(dag.BasicEdge(&root, v))
-		}
-	}
-
-	err := depsGraph.Validate()
-	if err != nil {
-		log.Fatalf("dependencies invalid, %+v", err)
 	}
 	depsGraph.TransitiveReduction()
 	return depsGraph
 }
 
-// built in methods dont walk correctly because they use Set's that are built on maps with no order guarantees..
-func childrenNames(vertex dag.Vertex, deps *dag.AcyclicGraph) []string {
+func childrenNames(vertex *graph.Vertex, deps *graph.DAG) []string {
 	var verts []string
-	start := dag.AsVertexList(deps.DownEdges(vertex))
-	memoFunc := func(v dag.Vertex, d int) error {
-		verts = append(verts, v.(LabeledVertex).Label())
-		return nil
+	start := deps.VertexList(vertex)
+	for _, v := range start {
+		if v != root {
+			verts = append(verts, v.Name)
+		}
 	}
 
-	if err := deps.DepthFirstWalk(start, memoFunc); err != nil {
-		log.Errorf("Error finding children: %+v", err)
-	}
 	return verts
 }
 

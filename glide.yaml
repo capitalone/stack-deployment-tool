@@ -21,10 +21,6 @@ import:
 - package: github.com/dustin/go-jsonpointer
 - package: github.com/go-ini/ini
   version: ^1.21.1
-- package: github.com/hashicorp/terraform
-  version: ^0.7.5
-  subpackages:
-  - dag
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: golang.org/x/text
