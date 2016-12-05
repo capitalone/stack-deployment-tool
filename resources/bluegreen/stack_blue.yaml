@@ -27,8 +27,12 @@ stacks:
         LBSecurityGroups: '{{env.LBSecurityGroups}}'
         Environment: dev
         AMI: '{{env.AMI}}'
+        Proxy: '{{env.PROXY}}'
+        GivePublicIP: '{{env.GivePublicIP}}'
+        OwnerContact: '{{env.OwnerContact}}'
       tags:
         <<: *common_tags
+        <<: *common_parameters
         Environment: dev
     bluegreen: # bluegreen example using the same stack as above
       vars:

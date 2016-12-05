@@ -41,6 +41,9 @@ Parameters:
   LBSubnets:
     Description: The subnets that the load balancer will cover
     Type: List<AWS::EC2::Subnet::Id>
+  Proxy:
+    Type: String
+    Default: ""
   OwnerContact:
     Default: opensourceoffice@capitalone.com
     Description: Email of owner
@@ -48,6 +51,9 @@ Parameters:
   VPCId:
     Description: The VPC for app to run in.
     Type: AWS::EC2::VPC::Id
+  GivePublicIP:
+    Default: "true"
+    Type: String
 Resources:
   AsgBlue:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -66,7 +72,7 @@ Resources:
   LcBlue:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      AssociatePublicIpAddress: true
+      AssociatePublicIpAddress: !Ref GivePublicIP
       IamInstanceProfile: !Ref InstanceProfileARN
       ImageId: !Ref AMI
       InstanceMonitoring: true
@@ -81,7 +87,7 @@ Resources:
             echo 'Blue' > /usr/share/nginx/html/index.html
             apt-get install -y python python-setuptools
             cd /opt
-            if [ -a /opt/aws/aws-cfn-bootstrap ]; then
+            if [ ! -d /opt/aws/bin ] && [ -d /opt/aws/aws-cfn-bootstrap ]; then
               ln -sf /opt/aws/aws-cfn-bootstrap/bin /opt/aws/bin
             else
               curl https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz -O
@@ -90,7 +96,11 @@ Resources:
               easy_install -s /opt/aws/bin aws-cfn-bootstrap-latest.tar.gz
               ln -fs /opt/aws/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
             fi
-            /opt/aws/bin/cfn-signal --exit-code $? --region ${AWS::Region} '${WaitHandleBlue}'
+            PROXY=""
+            if [ "${Proxy}" != "" ]; then
+              PROXY="--https-proxy=${Proxy}"
+            fi
+            /opt/aws/bin/cfn-signal --exit-code $? $PROXY --region ${AWS::Region} '${WaitHandleBlue}'
   LoadBalancer:
     Properties:
       CrossZone: true
