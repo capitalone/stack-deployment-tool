@@ -21,11 +21,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/capitalone/stack-deployment-tool/sdt"
 	"github.com/capitalone/stack-deployment-tool/utils"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -81,6 +83,13 @@ func region() string {
 	return utils.GetenvWithDefault("AWS_REGION", utils.GetenvWithDefault("AWS_DEFAULT_REGION", "us-east-1"))
 }
 
+// addNameAndVersionToUserAgent will add the name and version of this utility to the
+// user-agent in the request from the aws sdk
+var addNameAndVersionToUserAgent = request.NamedHandler{
+	Name: "stack-deployment-tool.providers.aws.UserAgentHandler",
+	Fn:   request.MakeAddToUserAgentHandler("sdt", sdt.Version),
+}
+
 func createSession(httpClient *http.Client) *session.Session {
 	region := region()
 	config := aws.NewConfig().WithRegion(region).
@@ -95,6 +104,8 @@ func createSession(httpClient *http.Client) *session.Session {
 			roleArn(),
 			func(p *stscreds.AssumeRoleProvider) { p.RoleSessionName = sessionName() })
 	}
+
+	sess.Handlers.Build.PushFrontNamed(addNameAndVersionToUserAgent)
 
 	return sess
 }

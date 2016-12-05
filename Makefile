@@ -42,7 +42,7 @@ fmt:
 
 
 BUILD_VERSION:=${VERSION}-$(shell git log -n 1 --pretty=format:'%H')
-VER_FLAG:=--ldflags '-X github.com/capitalone/stack-deployment-tool/cmd.Version=$(BUILD_VERSION)'
+VER_FLAG:=--ldflags '-X github.com/capitalone/stack-deployment-tool/sdt.Version=$(BUILD_VERSION)'
 
 .PHONY: quick
 quick: build_darwin
