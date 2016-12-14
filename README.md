@@ -58,7 +58,7 @@ Usage:
 Available Commands:
   artifacts   artifacts functions, like finding uploading, downloading, promoting
   stacks      Stack manipulation commands
-  version     Print the version number of Hugo
+  version     Print the version number of stack-deployment-tool
   versions    versioning commands
 
 Flags:
