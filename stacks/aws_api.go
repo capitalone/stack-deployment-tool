@@ -63,7 +63,7 @@ func (a *AWSStackApi) FindStack(stackName string) *cloudformation.Stack {
 
 	log.Debugf("stackOutput: %s\n", stackOutput)
 	if err != nil {
-		log.Debugf("error: %+v\n", err)
+		log.Errorf("Find Stack Error: %+v\n", err)
 		return nil
 	}
 
