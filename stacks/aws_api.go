@@ -12,6 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 //
+// SPDX-Copyright: Copyright (c) Capital One Services, LLC
+// SPDX-License-Identifier: Apache-2.0
+//
 package stacks
 
 import (
@@ -63,7 +66,7 @@ func (a *AWSStackApi) FindStack(stackName string) *cloudformation.Stack {
 
 	log.Debugf("stackOutput: %s\n", stackOutput)
 	if err != nil {
-		log.Debugf("error: %+v\n", err)
+		log.Errorf("Find Stack Error: %+v\n", err)
 		return nil
 	}
 
