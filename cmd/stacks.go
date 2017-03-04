@@ -145,8 +145,8 @@ func StacksApi() stacks.StackApi {
 		return api
 	}
 	api = stacks.DefaultStackApi()
-	api.DryMode(dryFlag)
-	if dryFlag {
+	api.DryMode(IsDryMode())
+	if IsDryMode() {
 		log.Infof("-- DRY MODE --")
 	}
 	return api

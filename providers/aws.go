@@ -29,10 +29,12 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
 	ini "github.com/go-ini/ini"
 )
@@ -45,6 +47,7 @@ type AWSApi struct {
 	Session *session.Session
 	cfsrvc  *cloudformation.CloudFormation
 	s3srvc  *s3.S3
+	ec2srvc *ec2.EC2
 	dryMode bool
 }
 
@@ -60,7 +63,7 @@ func sessionName() string {
 	return fmt.Sprintf("%s-%d", utils.GetenvWithDefault("USER", ""), time.Now().UTC().Unix())
 }
 
-func roleArn() string {
+func RoleArn() string {
 	role := utils.GetenvWithDefault("AWS_ROLE_ARN", "")
 	if len(role) == 0 { // maybe try $HOME/.aws/config
 		profile := utils.GetenvWithDefault("AWS_PROFILE", "")
@@ -82,7 +85,7 @@ func roleArn() string {
 	return role
 }
 
-func region() string {
+func Region() string {
 	return utils.GetenvWithDefault("AWS_REGION", utils.GetenvWithDefault("AWS_DEFAULT_REGION", "us-east-1"))
 }
 
@@ -94,17 +97,17 @@ var addNameAndVersionToUserAgent = request.NamedHandler{
 }
 
 func createSession(httpClient *http.Client) *session.Session {
-	region := region()
+	region := Region()
 	config := aws.NewConfig().WithRegion(region).
 		WithMaxRetries(retry_max).WithCredentialsChainVerboseErrors(true).
 		WithHTTPClient(httpClient)
 
 	sess := session.New(config)
 
-	role := roleArn()
+	role := RoleArn()
 	if len(role) > 0 {
 		sess.Config.Credentials = stscreds.NewCredentials(sess,
-			roleArn(),
+			role,
 			func(p *stscreds.AssumeRoleProvider) { p.RoleSessionName = sessionName() })
 	}
 
@@ -121,8 +124,20 @@ func (a *AWSApi) DryMode(enable bool) {
 	a.dryMode = enable
 }
 
+func (a *AWSApi) MustHaveAccess() {
+	params := &cloudformation.DescribeAccountLimitsInput{}
+	_, err := cloudformation.New(a.Session, a.Session.Config).DescribeAccountLimits(params)
+	if err != nil {
+		// check for ExpiredToken
+		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "ExpiredToken" {
+			log.Fatalf("%v %v", awsErr.Code(), awsErr.Message())
+		}
+	}
+}
+
 func (a *AWSApi) CFService() *cloudformation.CloudFormation {
 	if a.cfsrvc == nil {
+		a.MustHaveAccess()
 		a.cfsrvc = cloudformation.New(a.Session, a.Session.Config)
 	}
 	return a.cfsrvc
@@ -130,7 +145,16 @@ func (a *AWSApi) CFService() *cloudformation.CloudFormation {
 
 func (a *AWSApi) S3Service() *s3.S3 {
 	if a.s3srvc == nil {
+		a.MustHaveAccess()
 		a.s3srvc = s3.New(a.Session, a.Session.Config)
 	}
 	return a.s3srvc
+}
+
+func (a *AWSApi) EC2Service() *ec2.EC2 {
+	if a.ec2srvc == nil {
+		a.MustHaveAccess()
+		a.ec2srvc = ec2.New(a.Session, a.Session.Config)
+	}
+	return a.ec2srvc
 }
