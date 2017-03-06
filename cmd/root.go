@@ -23,12 +23,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-const projectName = "stack-deployment-tool"
+const (
+	projectName = "stack-deployment-tool"
+	dryModeFlag = "drymode"
+	debugFlag   = "debug"
+)
 
 var (
-	cfgFile   string
-	debugFlag bool
-	dryFlag   bool
+	cfgFile string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -40,7 +42,7 @@ var RootCmd = &cobra.Command{
 	`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// setup debugging
-		if debugFlag {
+		if IsDebug() {
 			log.SetLevel(log.DebugLevel)
 		}
 	},
@@ -54,14 +56,26 @@ func Execute() {
 	}
 }
 
+func IsDryMode() bool {
+	return viper.GetBool(dryModeFlag)
+}
+
+func IsDebug() bool {
+	return viper.GetBool(debugFlag)
+}
+
 func init() {
 	// setup logging
 	log.SetLevel(log.InfoLevel)
 	cobra.OnInitialize(initConfig)
 
 	// global flags for the application.
-	RootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "enable debug")
-	RootCmd.PersistentFlags().BoolVarP(&dryFlag, "drymode", "q", false, "enable dry mode")
+	RootCmd.PersistentFlags().BoolP(debugFlag, "d", false, "enable debug")
+	viper.BindPFlag(debugFlag, RootCmd.PersistentFlags().Lookup(debugFlag))
+
+	RootCmd.PersistentFlags().BoolP(dryModeFlag, "q", false, "enable dry mode")
+	viper.BindPFlag(dryModeFlag, RootCmd.PersistentFlags().Lookup(dryModeFlag))
+
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/."+projectName+".yaml)")
 	// local flags
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

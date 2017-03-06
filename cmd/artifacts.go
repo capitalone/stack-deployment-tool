@@ -65,7 +65,7 @@ var artifactsUploadCmd = &cobra.Command{
 
 		log.Debugf("artifact: %#v", artifact)
 
-		if !dryFlag {
+		if !IsDryMode() {
 			loc := artifact.Upload()
 			log.Infof("Uploaded to: %s", loc)
 		}
@@ -93,7 +93,7 @@ var artifactsDownoadCmd = &cobra.Command{
 		mergeStacksConfIfAvailable(artifact)
 		log.Debugf("artifact: %#v", artifact)
 
-		if !dryFlag {
+		if !IsDryMode() {
 			artifact.Download()
 			log.Infof("Downloaded: %s", fileName)
 		}
@@ -169,7 +169,7 @@ var artifactsPromoteCmd = &cobra.Command{
 
 		log.Debugf("artifact: %#v", artifact)
 
-		if !dryFlag {
+		if !IsDryMode() {
 			artifact.Promote(args[1])
 			log.Infof("Promoted: %s", fileName)
 		}

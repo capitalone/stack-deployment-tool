@@ -53,7 +53,7 @@ var versionsBumpCmd = &cobra.Command{
 		}
 
 		fmt.Printf("New version: %+v\n", v)
-		if !dryFlag {
+		if !IsDryMode() {
 			v.WriteVersion()
 		}
 	},
@@ -128,6 +128,4 @@ func init() {
 	versionsCmd.AddCommand(versionsInitCmd)
 	versionsCmd.AddCommand(versionsBuildCmd)
 	RootCmd.AddCommand(versionsCmd)
-
-	//versionsBumpCmd.PersistentFlags().StringVarP(&imageVer, "version", "v", "", "image version [AmiVersion]")
 }
