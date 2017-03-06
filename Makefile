@@ -1,4 +1,10 @@
-VERSION:=0.0.1
+
+ifeq (${TRAVIS_TAG},)
+VERSION:=0.0.0
+else
+VERSION:=${TRAVIS_TAG}
+endif
+
 export GO15VENDOREXPERIMENT=1
 
 default: build
