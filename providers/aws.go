@@ -43,6 +43,10 @@ const (
 	retry_max = 5
 )
 
+var (
+	roleArn *string
+)
+
 type AWSApi struct {
 	Session *session.Session
 	cfsrvc  *cloudformation.CloudFormation
@@ -64,25 +68,28 @@ func sessionName() string {
 }
 
 func RoleArn() string {
-	role := utils.GetenvWithDefault("AWS_ROLE_ARN", "")
-	if len(role) == 0 { // maybe try $HOME/.aws/config
-		profile := utils.GetenvWithDefault("AWS_PROFILE", "")
-		configFile := filepath.Join(os.Getenv("HOME"), ".aws", "config")
-		if len(profile) > 0 && utils.FileExists(configFile) {
-			cfg, err := ini.Load(configFile)
-			if err != nil {
-				log.Debugf("Error loading %s: %+v", configFile, err)
-			} else {
-				role = cfg.Section("profile " + profile).Key("saml_role").Value()
+	if roleArn == nil {
+		role := utils.GetenvWithDefault("AWS_ROLE_ARN", "")
+		if len(role) == 0 { // maybe try $HOME/.aws/config
+			profile := utils.GetenvWithDefault("AWS_PROFILE", "")
+			configFile := filepath.Join(os.Getenv("HOME"), ".aws", "config")
+			if len(profile) > 0 && utils.FileExists(configFile) {
+				cfg, err := ini.Load(configFile)
+				if err != nil {
+					log.Debugf("Error loading %s: %+v", configFile, err)
+				} else {
+					role = cfg.Section("profile " + profile).Key("saml_role").Value()
+				}
 			}
 		}
+		if len(role) == 0 { // check if it is still empty..
+			log.Infof("AWS_ROLE_ARN is empty")
+		} else {
+			log.Infof("Using AWS ROLE: %s", role)
+		}
+		roleArn = &role
 	}
-	if len(role) == 0 { // check if it is still empty..
-		log.Infof("AWS_ROLE_ARN is empty")
-	} else {
-		log.Infof("Using AWS ROLE: %s", role)
-	}
-	return role
+	return *roleArn
 }
 
 func Region() string {
