@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	projectName = "stack-deployment-tool"
-	dryModeFlag = "drymode"
-	debugFlag   = "debug"
+	projectName    = "stack-deployment-tool"
+	dryModeFlag    = "drymode"
+	debugFlag      = "debug"
+	assumeRoleFlag = "assume-role"
 )
 
 var (
@@ -75,6 +76,10 @@ func init() {
 
 	RootCmd.PersistentFlags().BoolP(dryModeFlag, "q", false, "enable dry mode")
 	viper.BindPFlag(dryModeFlag, RootCmd.PersistentFlags().Lookup(dryModeFlag))
+
+	RootCmd.PersistentFlags().Bool(assumeRoleFlag, false,
+		"force assume role, if AWS_ROLE_ARN is not provided it will be guessed based on AWS_PROFILE and ~/.aws/config")
+	viper.BindPFlag(assumeRoleFlag, RootCmd.PersistentFlags().Lookup(assumeRoleFlag))
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/."+projectName+".yaml)")
 	// local flags

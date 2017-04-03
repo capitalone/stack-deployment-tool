@@ -15,6 +15,8 @@
 package images
 
 import (
+	"sync"
+
 	"github.com/capitalone/stack-deployment-tool/stacks"
 
 	"github.com/aymerick/raymond"
@@ -26,8 +28,29 @@ const (
 )
 
 func init() {
-	stacks.RegisterTemplateHelper(amiTemplCmd, NewAmiFinder(), amiHelper)
-	stacks.RegisterTemplateHelper(latestAmiTemplCmd, NewAmiFinder(), latestAmiHelper)
+	lazyImageFinder := &LazyImageFinder{}
+	stacks.RegisterTemplateHelper(amiTemplCmd, lazyImageFinder, amiHelper)
+	stacks.RegisterTemplateHelper(latestAmiTemplCmd, lazyImageFinder, latestAmiHelper)
+}
+
+type LazyImageFinder struct {
+	finderInit sync.Once
+	finderInst *AmiFinder
+}
+
+func (l *LazyImageFinder) FindImageId(platform, version string) string {
+	return l.finder().FindImageId(platform, version)
+}
+
+func (l *LazyImageFinder) FindLatestImageId(platform string) string {
+	return l.finder().FindLatestImageId(platform)
+}
+
+func (l *LazyImageFinder) finder() *AmiFinder {
+	l.finderInit.Do(func() {
+		l.finderInst = NewAmiFinder()
+	})
+	return l.finderInst
 }
 
 func amiHelper(options *raymond.Options) raymond.SafeString {

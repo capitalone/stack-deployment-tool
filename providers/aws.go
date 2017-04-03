@@ -26,6 +26,7 @@ import (
 
 	"github.com/capitalone/stack-deployment-tool/sdt"
 	"github.com/capitalone/stack-deployment-tool/utils"
+	"github.com/spf13/viper"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
@@ -41,6 +42,10 @@ import (
 
 const (
 	retry_max = 5
+)
+
+var (
+	roleArn *string
 )
 
 type AWSApi struct {
@@ -63,26 +68,38 @@ func sessionName() string {
 	return fmt.Sprintf("%s-%d", utils.GetenvWithDefault("USER", ""), time.Now().UTC().Unix())
 }
 
+func EnvRoleArn() string {
+	return utils.GetenvWithDefault("AWS_ROLE_ARN", "")
+}
+
+func EnvProfile() string {
+	return utils.GetenvWithDefault("AWS_PROFILE", "")
+}
+
 func RoleArn() string {
-	role := utils.GetenvWithDefault("AWS_ROLE_ARN", "")
-	if len(role) == 0 { // maybe try $HOME/.aws/config
-		profile := utils.GetenvWithDefault("AWS_PROFILE", "")
-		configFile := filepath.Join(os.Getenv("HOME"), ".aws", "config")
-		if len(profile) > 0 && utils.FileExists(configFile) {
-			cfg, err := ini.Load(configFile)
-			if err != nil {
-				log.Debugf("Error loading %s: %+v", configFile, err)
-			} else {
-				role = cfg.Section("profile " + profile).Key("saml_role").Value()
+	if roleArn == nil {
+		role := EnvRoleArn()
+		if len(role) == 0 { // maybe try $HOME/.aws/config
+			profile := EnvProfile()
+			configFile := filepath.Join(os.Getenv("HOME"), ".aws", "config")
+			if len(profile) > 0 && utils.FileExists(configFile) {
+				cfg, err := ini.Load(configFile)
+				if err != nil {
+					log.Debugf("Error loading %s: %+v", configFile, err)
+				} else {
+					role = cfg.Section("profile " + profile).Key("saml_role").Value()
+				}
 			}
 		}
+		if len(role) == 0 { // check if it is still empty..
+			log.Debugf("AWS_ROLE_ARN is empty")
+		} else {
+			log.Debugf("Found AWS ROLE: %s", role)
+		}
+		roleArn = &role
 	}
-	if len(role) == 0 { // check if it is still empty..
-		log.Infof("AWS_ROLE_ARN is empty")
-	} else {
-		log.Infof("Using AWS ROLE: %s", role)
-	}
-	return role
+
+	return *roleArn
 }
 
 func Region() string {
@@ -104,11 +121,15 @@ func createSession(httpClient *http.Client) *session.Session {
 
 	sess := session.New(config)
 
-	role := RoleArn()
-	if len(role) > 0 {
-		sess.Config.Credentials = stscreds.NewCredentials(sess,
-			role,
-			func(p *stscreds.AssumeRoleProvider) { p.RoleSessionName = sessionName() })
+	forceAssume := viper.GetBool("assume-role")
+	if len(EnvRoleArn()) == 0 && forceAssume {
+		role := RoleArn()
+		if len(role) > 0 {
+			log.Infof("Assuming Role: %s", role)
+			sess.Config.Credentials = stscreds.NewCredentials(sess,
+				role,
+				func(p *stscreds.AssumeRoleProvider) { p.RoleSessionName = sessionName() })
+		}
 	}
 
 	sess.Handlers.Build.PushFrontNamed(addNameAndVersionToUserAgent)

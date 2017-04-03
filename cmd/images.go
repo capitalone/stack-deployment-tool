@@ -76,8 +76,8 @@ func init() {
 		viper.SetDefault("ImageFilterRegex", map[string]string{
 			"name": `^COF-[0-9A-Za-z_.\-]+-x64-HVM-Enc-[0-9A-Za-z_.\-]+`,
 		})
-
 	}
+
 	viper.SetDefault("VersionRegex", `-([\d]+(-[\d]+)*)$`)
 	viper.SetDefault("PlatformRegex", `^[0-9A-Za-z_.]+-([0-9A-Za-z_.]+)`)
 
