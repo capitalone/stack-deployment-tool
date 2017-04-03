@@ -102,6 +102,9 @@ func (a *AmiFinder) describeImages(params *ec2.DescribeImagesInput) (*ec2.Descri
 		resp, err = a.DescribeImages(params)
 	}
 	log.Debugf("DescribeImages Err: %#v Response: %#v", err, resp)
+	if err != nil {
+		log.Errorf("Error finding image: %v", err)
+	}
 	return resp, err
 }
 
