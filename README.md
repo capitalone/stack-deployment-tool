@@ -4,6 +4,8 @@
 
 # Stack Deployment Tool  
 
+[![Join the chat at https://gitter.im/capitalone/stack-deployment-tool](https://badges.gitter.im/capitalone/stack-deployment-tool.svg)](https://gitter.im/capitalone/stack-deployment-tool?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Tool that codeifies packaging & delivery best-practices. 
 It extends stack configuration with local templating and associating multiple [CloudFormation](https://aws.amazon.com/cloudformation/) stacks for lifecycle management: deployment, updating, and destroying. 
 
