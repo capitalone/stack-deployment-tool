@@ -122,7 +122,7 @@ func createSession(httpClient *http.Client) *session.Session {
 	sess := session.New(config)
 
 	forceAssume := viper.GetBool("assume-role")
-	if len(EnvRoleArn()) == 0 && forceAssume {
+	if len(EnvRoleArn()) > 0 && forceAssume {
 		role := RoleArn()
 		if len(role) > 0 {
 			log.Infof("Assuming Role: %s", role)
