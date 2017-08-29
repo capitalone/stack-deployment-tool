@@ -19,11 +19,13 @@ package utils
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -123,4 +125,30 @@ func TestSpecialFnIncludeLinesMissingFile(t *testing.T) {
 
 	assert.Equal(t, valid, string(cftJson))
 
+}
+
+func TestTemporaryEnvNew(t *testing.T) {
+	const key = "TEMP_ENV_1"
+	require.Equal(t, "", os.Getenv(key))
+	TemporaryEnv(key, "asdf", func() {
+		require.Equal(t, "asdf", os.Getenv(key))
+	})
+	require.Equal(t, "", os.Getenv(key))
+	v, ok := os.LookupEnv(key)
+	require.False(t, ok)
+	require.Equal(t, "", v)
+}
+
+func TestTemporaryEnvExisting(t *testing.T) {
+	const key = "TEMP_ENV_2"
+	os.Setenv(key, "qwerty")
+
+	require.Equal(t, "qwerty", os.Getenv(key))
+	TemporaryEnv(key, "asdf", func() {
+		require.Equal(t, "asdf", os.Getenv(key))
+	})
+	require.Equal(t, "qwerty", os.Getenv(key))
+	v, ok := os.LookupEnv(key)
+	require.True(t, ok)
+	require.Equal(t, "qwerty", v)
 }
