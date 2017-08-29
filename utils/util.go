@@ -315,3 +315,19 @@ func MaxInt(x, y int) int {
 	}
 	return y
 }
+
+// testing util
+
+func TemporaryEnv(name, value string, runIt func()) {
+	old, ok := os.LookupEnv(name)
+	os.Setenv(name, value)
+	defer func() {
+		if !ok {
+			os.Unsetenv(name)
+		} else {
+			os.Setenv(name, old)
+		}
+	}()
+
+	runIt()
+}

@@ -1,0 +1,9 @@
+UserData: 
+    "Fn::Base64": !Sub |
+        #!/bin/bash
+        yum install -y aws-cfn-bootstrap
+        ${Local::IncludeEnv TEMP_ENV_VAL}
+        /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+        /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
+UserData2-${Local::IncludeEnv TEMP_ENV_VAL}:
+    temp: !Local::IncludeEnv TEMP_ENV_VAL
