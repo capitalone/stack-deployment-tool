@@ -1,6 +1,6 @@
 language: go
 go:
-- 1.7.3
+- 1.9
 - master
 deploy:
   provider: releases
@@ -13,4 +13,4 @@ deploy:
   on:
     repo: capitalone/stack-deployment-tool
     tags: true
-    go: '1.7.3'
+    go: '1.9'
