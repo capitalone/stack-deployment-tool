@@ -19,9 +19,14 @@ var (
 	valueIncludeEnvTagRe = regexp.MustCompile(`!Local::IncludeEnv[ ]+([[:ascii:]]+)`)
 )
 
+func init() {
+	AddDirective(ApplyIncludeEnvDirective)
+}
+
 func ApplyIncludeEnvDirective(reader io.Reader) []byte {
 	output := bytes.NewBuffer([]byte{})
 	scanner := bufio.NewScanner(reader)
+	scanner.Split(CustomScanLines)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
@@ -50,7 +55,7 @@ func ApplyIncludeEnvDirective(reader io.Reader) []byte {
 			output.Write(line)
 		}
 
-		output.WriteByte('\n')
+		//output.WriteByte('\n')
 	}
 	return output.Bytes()
 }

@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/prometheus/common/log"
 )
@@ -40,20 +41,25 @@ var (
 	valueTagRe = regexp.MustCompile(`!Local::IncludeFile(Lines)?[ ]+([[:ascii:]]+)`)
 )
 
+func init() {
+	AddDirective(ApplyIncludeFileLinesDirective)
+}
+
 func ApplyIncludeFileLinesDirective(reader io.Reader) []byte {
 	output := bytes.NewBuffer([]byte{})
 	scanner := bufio.NewScanner(reader)
+	scanner.Split(CustomScanLines)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		loc := literalIncludeRe.FindIndex(line)
 		tagLoc := valueTagRe.FindIndex(line)
 		if len(loc) == 2 {
-			fileName := string(literalIncludeRe.FindSubmatch(line)[2])
+			fileName := strings.TrimSpace(string(literalIncludeRe.FindSubmatch(line)[2]))
 			log.Debugf("loading include file: %s", fileName)
 			output.Write(indentedFileLines(loc[0], fileName))
 		} else if len(tagLoc) == 2 {
 			// case for tag value include
-			fileName := string(valueTagRe.FindSubmatch(line)[2])
+			fileName := strings.TrimSpace(string(valueTagRe.FindSubmatch(line)[2]))
 			log.Debugf("loading include file: %s", fileName)
 			spaces := indentation(line)
 			output.Write(line[0:tagLoc[0]])
@@ -62,7 +68,6 @@ func ApplyIncludeFileLinesDirective(reader io.Reader) []byte {
 			output.Write(indentedFileLines(spaces+2, fileName))
 		} else {
 			output.Write(line)
-			output.WriteByte('\n')
 		}
 	}
 

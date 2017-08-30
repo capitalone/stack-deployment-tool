@@ -32,8 +32,7 @@ var expectedEnvIncl = `UserData:
         /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
         /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
 UserData2-something:
-    temp: something
-`
+    temp: something` // note: no trailing new-line, just like the file!
 
 func TestApplyIncludeEnvDirective(t *testing.T) {
 	fname := "../resources/" + "user-data-env.yaml"
@@ -45,7 +44,7 @@ func TestApplyIncludeEnvDirective(t *testing.T) {
 		TemporaryEnv("TEMP_ENV_VAL", "something", func() {
 			result = ApplyIncludeEnvDirective(f)
 		})
-
+		//fmt.Printf("result: '%s'", result)
 		assert.Equal(t, expectedEnvIncl, string(result))
 	})
 }

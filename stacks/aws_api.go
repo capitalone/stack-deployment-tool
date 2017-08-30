@@ -18,7 +18,6 @@
 package stacks
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -293,7 +292,7 @@ func (a *AWSStackApi) loadTemplateJSON(templateNames ...string) string {
 				if filepath.Ext(p) == ".yml" || filepath.Ext(p) == ".yaml" {
 					// we dont change the yaml very much because of the custom / local tags for CloudFormation
 					utils.TemporaryChdir(filepath.Dir(p), func() {
-						template = string(utils.ApplyIncludeFileLinesDirective(bytes.NewReader(b)))
+						template = utils.ApplyDirectives(b)
 					})
 				} else {
 					y, err := utils.DecodeHJSON(b)
