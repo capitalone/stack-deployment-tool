@@ -83,7 +83,7 @@ func (a *NexusArtifact) Upload() string {
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Debugf("Response: %s\n", resp)
+	log.Debugf("Response: %v\n", resp)
 	log.Debugf("Response: %s\n", string(body))
 	if !OkResponse(resp) {
 		log.Fatalf("Error uploading archive file: %s %v", a.FileName, resp.Status)
