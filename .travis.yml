@@ -2,6 +2,7 @@ language: go
 go:
 - 1.12
 - master
+go_import_path: github.com/capitalone/stack-deployment-tool
 deploy:
   provider: releases
   api_key:
