@@ -18,9 +18,9 @@
 package artifacts
 
 type Artifact struct {
-	Repo     string // Target Repositiory to use for the artifact
-	Group    string // Target Repositiory group (default: com.capitalone.bankoao)
-	Name     string // Target Repositiory artifact name (default: bankoao_inf_nagios)
+	Repo     string // Target Repository to use for the artifact
+	Group    string // Target Repository group (default: com.capitalone.bankoao)
+	Name     string // Target Repository artifact name (default: bankoao_inf_nagios)
 	FileName string // File to upload
 	Version  string // version of the artifact
 }
