@@ -1,3 +1,5 @@
+# Due to changes in the priorities, this project is currently not being supported. The project is archived as of 9/17/21 and will be available in a read-only state. Please note, since archival, the project is not maintained or reviewed. #
+
 [![Join the chat at https://gitter.im/capitalone/stack-deployment-tool](https://badges.gitter.im/capitalone/stack-deployment-tool.svg)](https://gitter.im/capitalone/stack-deployment-tool?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/capitalone/stack-deployment-tool.svg?branch=master)](https://travis-ci.org/capitalone/stack-deployment-tool)
 [![Go Report Card](https://goreportcard.com/badge/github.com/capitalone/stack-deployment-tool)](https://goreportcard.com/report/github.com/capitalone/stack-deployment-tool)
